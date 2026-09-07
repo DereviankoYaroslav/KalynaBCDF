@@ -1,0 +1,71 @@
+#ifndef EXT_PARAMS
+#define EXT_PARAMS
+
+#define BITS_IN_BYTE 8
+
+#define H ((double)2.0012)
+#define W 512
+
+#define KALYNA_128_128 0
+#define KALYNA_128_256 1
+#define KALYNA_256_256 2
+#define KALYNA_256_512 3
+#define KALYNA_512_512 4
+
+#define KALYNA_EXTRACTOR_MODE 4
+
+#if KALYNA_EXTRACTOR_MODE == KALYNA_128_128
+	#define NB 2
+	#define NK 2
+	#define BLOCK_BITLEN 128
+	#define KEY_BITLEN 128
+	#define BLOCK_LEN 16
+	#define KEY_LEN 16
+	#define NO_OF_BITS_TO_RETURN 128
+	#define ENT_POOL_SIZE 75
+	#define TARGET_EXTRACTED_BYTES 16000000
+#elif KALYNA_EXTRACTOR_MODE == KALYNA_128_256
+	#define NB 2
+	#define NK 4
+	#define BLOCK_BITLEN 128
+	#define KEY_BITLEN 256
+	#define BLOCK_LEN 16
+	#define KEY_LEN 32
+	#define NO_OF_BITS_TO_RETURN 256
+	#define ENT_POOL_SIZE 150
+	#define TARGET_EXTRACTED_BYTES 32000000
+#elif KALYNA_EXTRACTOR_MODE == KALYNA_256_256
+	#define NB 4
+	#define NK 4
+	#define BLOCK_BITLEN 256
+	#define KEY_BITLEN 256
+	#define BLOCK_LEN 32
+	#define KEY_LEN 32
+	#define NO_OF_BITS_TO_RETURN 256
+	#define ENT_POOL_SIZE 150
+	#define TARGET_EXTRACTED_BYTES 32000000
+#elif KALYNA_EXTRACTOR_MODE == KALYNA_256_512
+	#define NB 4
+	#define NK 8
+	#define BLOCK_BITLEN 256
+	#define KEY_BITLEN 512
+	#define BLOCK_LEN 32
+	#define KEY_LEN 64
+	#define NO_OF_BITS_TO_RETURN 512
+	#define ENT_POOL_SIZE 300
+	#define TARGET_EXTRACTED_BYTES 64000000
+#elif KALYNA_EXTRACTOR_MODE == KALYNA_512_512
+	#define NB 8
+	#define NK 8
+	#define BLOCK_BITLEN 512
+	#define KEY_BITLEN 512
+	#define BLOCK_LEN 64
+	#define KEY_LEN 64
+	#define NO_OF_BITS_TO_RETURN 512
+	#define ENT_POOL_SIZE 300
+	#define TARGET_EXTRACTED_BYTES 64000000
+#endif
+
+#define CHUNK_SIZE ENT_POOL_SIZE*80
+
+#endif
