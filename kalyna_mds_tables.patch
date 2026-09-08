@@ -1,0 +1,113 @@
+--- kalyna.c	2026-09-08 14:22:27.651393214 +0000
++++ ktt.c	2026-09-08 14:33:46.308391080 +0000
+@@ -9,6 +9,10 @@
+ #include "transformations.h"
+ #include "tables.h"
+ 
++/* MDS transform tables: built once, before any enciphering (see below). */
++static int  tt_ready;
++static void tt_init(void);
++
+ 
+ kalyna_t* KalynaInit(size_t block_size, size_t key_size) {
+     int i;
+@@ -52,6 +56,8 @@
+         return NULL;
+     }
+ 
++    if (!tt_ready) tt_init();
++
+     ctx->state = (uint64_t*)calloc(ctx->nb, sizeof(uint64_t));
+     if (ctx->state == NULL)
+         perror("Could not allocate memory for cipher state.");
+@@ -152,41 +158,68 @@
+ }
+ 
+ 
+-uint8_t MultiplyGF(uint8_t x, uint8_t y) {
+-    int i;
+-    uint8_t r = 0;
+-    uint8_t hbit = 0;
++static uint8_t MultiplyGF_slow(uint8_t x, uint8_t y) {
++    int i; uint8_t r = 0, hbit = 0;
+     for (i = 0; i < kBITS_IN_BYTE; ++i) {
+-        if ((y & 0x1) == 1)
+-            r ^= x;
+-        hbit = x & 0x80;
+-        x <<= 1;
+-        if (hbit == 0x80)
+-            x ^= kREDUCTION_POLYNOMIAL;
++        if ((y & 0x1) == 1) r ^= x;
++        hbit = x & 0x80; x <<= 1;
++        if (hbit == 0x80) x ^= kREDUCTION_POLYNOMIAL;
+         y >>= 1;
+     }
+     return r;
+ }
++uint8_t MultiplyGF(uint8_t x, uint8_t y) { return MultiplyGF_slow(x, y); }
++
++/* --- MDS transform tables ------------------------------------------------
++ * T[b][v] is the 64-bit contribution of input byte b holding value v to the
++ * output word, i.e. XOR over rows of ( GF(v, matrix[row][b]) << (row*8) ).
++ * MatrixMultiply then costs 8 lookups + 8 XORs per column instead of 512
++ * calls to MultiplyGF.  16 KB per matrix. */
++static uint64_t T_enc[8][256];
++static uint64_t T_dec[8][256];
++static void tt_build(uint64_t T[8][256], uint8_t m[8][8]) {
++    int bb, v, row;
++    for (bb = 0; bb < 8; ++bb)
++        for (v = 0; v < 256; ++v) {
++            uint64_t w = 0;
++            for (row = 0; row < 8; ++row)
++                w |= (uint64_t)MultiplyGF_slow((uint8_t)v, m[row][bb]) << (row * 8);
++            T[bb][v] = w;
++        }
++}
++static void tt_init(void) { tt_build(T_enc, mds_matrix); tt_build(T_dec, mds_inv_matrix); tt_ready = 1; }
++
+ 
+ void MatrixMultiply(kalyna_t* ctx, uint8_t matrix[8][8]) {
+-    int col, row, b;
+-    uint8_t product;
+-    uint64_t result;
++    int col, b;
+     uint8_t* state = WordsToBytes(ctx->nb, ctx->state);
+-
+-    for (col = 0; col < ctx->nb; ++col) {
+-        result = 0;
+-        for (row = sizeof(uint64_t) - 1; row >= 0; --row) {
+-            product = 0;
+-            for (b = sizeof(uint64_t) - 1; b >= 0; --b) {
+-                product ^= MultiplyGF(INDEX(state, b, col), matrix[row][b]);
++    uint64_t (*T)[256];
++    if (!tt_ready) tt_init();
++    if      (matrix == mds_matrix)     T = T_enc;
++    else if (matrix == mds_inv_matrix) T = T_dec;
++    else { /* unknown matrix: exact fallback */
++        int row; uint8_t product; uint64_t result;
++        for (col = 0; col < ctx->nb; ++col) {
++            result = 0;
++            for (row = sizeof(uint64_t) - 1; row >= 0; --row) {
++                product = 0;
++                for (b = sizeof(uint64_t) - 1; b >= 0; --b)
++                    product ^= MultiplyGF_slow(INDEX(state, b, col), matrix[row][b]);
++                result |= (uint64_t)product << (row * sizeof(uint64_t));
+             }
+-            result |= (uint64_t)product << (row * sizeof(uint64_t));
+-        }    
++            ctx->state[col] = result;
++        }
++        return;
++    }
++    for (col = 0; col < ctx->nb; ++col) {
++        uint64_t result = 0;
++        for (b = 0; b < 8; ++b)
++            result ^= T[b][INDEX(state, b, col)];
+         ctx->state[col] = result;
+     }
+ }
+ 
++
+ void MixColumns(kalyna_t* ctx) {
+     MatrixMultiply(ctx, mds_matrix);
+ }

@@ -4,19 +4,24 @@
 #include <vector>
 #include <sstream>
 #include <bitset>
-#include <windows.h>
+
+#ifndef __linux__
+	#include <windows.h>
+#endif
+
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <cmath> 
-#include <bcrypt.h>
 
 #include "params.h"
 
 //Kalyna
 #include "kalyna.h"
 #include "transformations.h"
-#include "tables.c"
+#ifndef __linux__
+	#include "tables.c"
+#endif
 
 using namespace std;
 #pragma warning(disable:4996)
@@ -510,8 +515,8 @@ int adaptiveProportionTest(
 
 int main()
 {
-	SetConsoleCP(1251);
-	SetConsoleOutputCP(1251);
+	//SetConsoleCP(1251);
+	//SetConsoleOutputCP(1251);
 	size_t nb, nk;
 
 	kalyna_t* ctx = KalynaInit(BLOCK_BITLEN, KEY_BITLEN);

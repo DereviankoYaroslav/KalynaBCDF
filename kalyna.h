@@ -16,6 +16,9 @@ Authors: Ruslan Kiianchuk, Ruslan Mordvinov, Roman Oliynykov
 #ifndef __linux__
 typedef unsigned char uint8_t;
 typedef unsigned long long uint64_t;
+#else
+typedef unsigned char uint8_t;
+typedef __uint64_t uint64_t;
 #endif
 
 /*!
